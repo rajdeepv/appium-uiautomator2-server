@@ -321,6 +321,9 @@ public class ActionsHelpers {
                         return MotionEvent.TOOL_TYPE_STYLUS;
                     case POINTER_TYPE_TOUCH:
                         return MotionEvent.TOOL_TYPE_FINGER;
+                    default:
+                        // use default
+                        break;
                 }
             }
         }
@@ -335,6 +338,9 @@ public class ActionsHelpers {
                 return InputDevice.SOURCE_STYLUS;
             case MotionEvent.TOOL_TYPE_FINGER:
                 return InputDevice.SOURCE_TOUCHSCREEN;
+            default:
+                // use default
+                break;
         }
         return InputDevice.SOURCE_MOUSE;
     }
@@ -561,7 +567,7 @@ public class ActionsHelpers {
                                 ACTION_ITEM_VALUE_KEY, action, action.getString(ACTION_KEY_ID)));
                     }
                     final KeyInputEventParams evtParams = new KeyInputEventParams();
-                    evtParams.keyCode = value.charAt(0);
+                    evtParams.keyCode = value.codePointAt(0);
                     evtParams.keyAction = itemType.equals(ACTION_ITEM_TYPE_KEY_DOWN) ?
                             KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
                     evtParams.startDelta = chainEntryPointDelta;
@@ -612,6 +618,14 @@ public class ActionsHelpers {
         return result;
     }
 
+    public static int metaKeysToState(final Set<Integer> metaKeys) {
+        int result = 0;
+        for (final int metaKey : metaKeys) {
+            result |= metaKey;
+        }
+        return result;
+    }
+
     public static abstract class InputEventParams {
         public long startDelta = 0;
 
@@ -637,13 +651,5 @@ public class ActionsHelpers {
         MotionInputEventParams() {
             super();
         }
-    }
-
-    public static int metaKeysToState(final Set<Integer> metaKeys) {
-        int result = 0;
-        for (final int metaKey : metaKeys) {
-            result |= metaKey;
-        }
-        return result;
     }
 }

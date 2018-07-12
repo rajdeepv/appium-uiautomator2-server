@@ -1,6 +1,5 @@
 package io.appium.uiautomator2.model;
 
-
 import android.support.test.uiautomator.UiSelector;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -9,45 +8,42 @@ import io.appium.uiautomator2.utils.Attribute;
 import static io.appium.uiautomator2.model.UiAutomationElement.charSequenceToString;
 
 public class CustomUiSelector {
+    private UiSelector selector;
 
-    private UiSelector selector = new UiSelector();
-    private UiAutomationElement uiAutomationElement;
-
-    CustomUiSelector(UiSelector selector){
+    CustomUiSelector(UiSelector selector) {
         this.selector = selector;
     }
 
     /**
-     * returns UiSelector object, based on UiAutomationElement attributes
      * @param node
-     * @return
+     * @return UiSelector object, based on UiAutomationElement attributes
      */
     public UiSelector getUiSelector(AccessibilityNodeInfo node) {
         XPathFinder.refreshUiElementTree();
-        uiAutomationElement = UiAutomationElement.map.get(node);
+        UiAutomationElement uiAutomationElement = UiAutomationElement.map.get(node);
         put(Attribute.PACKAGE, charSequenceToString(uiAutomationElement.getPackageName()));
         put(Attribute.CLASS, charSequenceToString(uiAutomationElement.getClassName()));
-        put( Attribute.TEXT, charSequenceToString(uiAutomationElement.getText()));
-        put( Attribute.CONTENT_DESC, charSequenceToString(uiAutomationElement.getContentDescription()));
-        put( Attribute.RESOURCE_ID, charSequenceToString(uiAutomationElement.getResourceId()));
-        put( Attribute.CHECKABLE, uiAutomationElement.isCheckable());
-        put( Attribute.CHECKED, uiAutomationElement.isChecked());
-        put( Attribute.CLICKABLE, uiAutomationElement.isClickable());
-        put( Attribute.ENABLED, uiAutomationElement.isEnabled());
-        put( Attribute.FOCUSABLE, uiAutomationElement.isFocusable());
-        put( Attribute.FOCUSED, uiAutomationElement.isFocused());
-        put( Attribute.LONG_CLICKABLE, uiAutomationElement.isLongClickable());
-        put( Attribute.PASSWORD, uiAutomationElement.isPassword());
-        put( Attribute.SCROLLABLE, uiAutomationElement.isScrollable());
-        put( Attribute.SELECTED, uiAutomationElement.isSelected());
-        put( Attribute.INDEX, uiAutomationElement.getIndex());
+        put(Attribute.TEXT, charSequenceToString(uiAutomationElement.getText()));
+        put(Attribute.CONTENT_DESC, charSequenceToString(uiAutomationElement.getContentDescription()));
+        put(Attribute.RESOURCE_ID, charSequenceToString(uiAutomationElement.getResourceId()));
+        put(Attribute.CHECKABLE, uiAutomationElement.isCheckable());
+        put(Attribute.CHECKED, uiAutomationElement.isChecked());
+        put(Attribute.CLICKABLE, uiAutomationElement.isClickable());
+        put(Attribute.ENABLED, uiAutomationElement.isEnabled());
+        put(Attribute.FOCUSABLE, uiAutomationElement.isFocusable());
+        put(Attribute.FOCUSED, uiAutomationElement.isFocused());
+        put(Attribute.LONG_CLICKABLE, uiAutomationElement.isLongClickable());
+        put(Attribute.PASSWORD, uiAutomationElement.isPassword());
+        put(Attribute.SCROLLABLE, uiAutomationElement.isScrollable());
+        put(Attribute.SELECTED, uiAutomationElement.isSelected());
+        put(Attribute.INDEX, uiAutomationElement.getIndex());
 
         return selector;
     }
 
-    private void put( Attribute key, Object value) {
+    private void put(Attribute key, Object value) {
         if (value == null) {
-            return ;
+            return;
         }
         switch (key) {
             case PACKAGE:
