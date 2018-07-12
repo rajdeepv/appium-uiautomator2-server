@@ -14,7 +14,7 @@ build the android project using below commands
 ### Starting server
 push both src and test apks to the device and execute the instrumentation tests.
 
-`adb shell am instrument -w io.appium.uiautomator2.test/android.support.test.runner.AndroidJUnitRunner`
+`adb shell am instrument -w io.appium.uiautomator2.server.test/android.support.test.runner.AndroidJUnitRunner`
 
 
 
