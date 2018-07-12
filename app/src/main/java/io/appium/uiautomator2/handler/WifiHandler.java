@@ -8,6 +8,7 @@ import android.support.test.InstrumentationRegistry;
 import io.appium.uiautomator2.http.AppiumResponse;
 import io.appium.uiautomator2.server.WDStatus;
 
+import static android.net.wifi.WifiManager.WIFI_STATE_DISABLED;
 import static android.net.wifi.WifiManager.WIFI_STATE_DISABLING;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLED;
 import static android.net.wifi.WifiManager.WIFI_STATE_ENABLING;
@@ -54,11 +55,9 @@ public class WifiHandler {
     private static boolean isSuccessful(boolean desired) {
         if (isInProgress()) {
             return false;
-        } else if (desired == false && wfm.getWifiState() == WifiManager.WIFI_STATE_DISABLED) {
-            return true;
-        } else if (desired == true && wfm.getWifiState() == WifiManager.WIFI_STATE_ENABLED) {
-            return true;
         }
-        return false;
+        return desired
+                ? wfm.getWifiState() == WIFI_STATE_ENABLED
+                : wfm.getWifiState() == WIFI_STATE_DISABLED;
     }
 }

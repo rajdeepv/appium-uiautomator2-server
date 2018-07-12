@@ -28,7 +28,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,18 +49,24 @@ public class WaitForIdleTimeoutTests {
     }
 
     @Test
-    public void shouldBeInteger() {
-        Assert.assertEquals(Integer.class, waitForIdeTimeout.getValueType());
+    public void shouldBeLong() {
+        Assert.assertEquals(Long.class, waitForIdeTimeout.getValueType());
     }
 
     @Test
     public void shouldReturnValidSettingName() {
-        Assert.assertEquals("waitForIdleTimeout", waitForIdeTimeout.getSettingName());
+        Assert.assertEquals("waitForIdleTimeout", waitForIdeTimeout.getName());
     }
 
     @Test
     public void shouldBeAbleToSetIdleTimeout() {
-        waitForIdeTimeout.updateSetting(123);
+        waitForIdeTimeout.update(123);
         verify(configurator).setWaitForIdleTimeout(123);
+    }
+
+    @Test
+    public void shouldBeAbleToGetIdleTimeout() {
+        when(configurator.getWaitForIdleTimeout()).thenReturn((long) 123);
+        Assert.assertEquals(Long.valueOf(123), waitForIdeTimeout.getValue());
     }
 }

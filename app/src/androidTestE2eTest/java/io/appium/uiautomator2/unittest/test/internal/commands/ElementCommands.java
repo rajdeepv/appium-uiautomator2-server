@@ -49,10 +49,27 @@ public class ElementCommands {
      */
     public static Response sendKeys(String elementId, String text) throws JSONException {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("element", elementId);
+        jsonObject.put("elementId", elementId);
         jsonObject.put("text", text);
         jsonObject.put("replace", false);
         return Client.post("/element/" + elementId + "/value", jsonObject);
+    }
+
+    /**
+     * Send a keycode with particular parameters
+     *
+     * @param keyCode Android key code
+     * @param metaState the state of meta keys
+     * @param flags KeyEvent flags
+     * @return Response from UiAutomator2 server
+     * @throws JSONException
+     */
+    public static Response pressKeyCode(int keyCode, int metaState, int flags) throws JSONException {
+        JSONObject payload = new JSONObject();
+        payload.put("keycode", keyCode);
+        payload.put("metastate", metaState);
+        payload.put("flags", flags);
+        return Client.post("/appium/device/press_keycode", payload);
     }
 
     /**

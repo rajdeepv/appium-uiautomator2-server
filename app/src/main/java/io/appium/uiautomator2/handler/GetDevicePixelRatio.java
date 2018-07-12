@@ -18,21 +18,18 @@ public class GetDevicePixelRatio extends SafeRequestHandler {
         super(mappedUri);
     }
 
-    @Override
-    public AppiumResponse safeHandle(IHttpRequest request) {
-        Logger.info("Get device pixel ratio");
-
-        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-
-        Float ratio = getDeviceScaleRatio(instrumentation);
-
-        return new AppiumResponse(getSessionId(request), WDStatus.SUCCESS, ratio);
-    }
-
     private static float getDeviceScaleRatio(Instrumentation instrumentation) {
         WindowManager windowManager = (WindowManager) instrumentation.getContext().getSystemService(Context.WINDOW_SERVICE);
         DisplayMetrics metrics = new DisplayMetrics();
         windowManager.getDefaultDisplay().getMetrics(metrics);
         return metrics.density;
+    }
+
+    @Override
+    protected AppiumResponse safeHandle(IHttpRequest request) {
+        Logger.info("Get device pixel ratio");
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Float ratio = getDeviceScaleRatio(instrumentation);
+        return new AppiumResponse(getSessionId(request), WDStatus.SUCCESS, ratio);
     }
 }

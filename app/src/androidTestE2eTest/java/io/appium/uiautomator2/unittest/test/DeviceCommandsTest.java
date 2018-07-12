@@ -17,6 +17,7 @@ package io.appium.uiautomator2.unittest.test;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.support.test.uiautomator.UiDevice;
 import android.util.Base64;
 
 import org.json.JSONArray;
@@ -24,18 +25,25 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.appium.uiautomator2.model.By;
 import io.appium.uiautomator2.model.internal.CustomUiDevice;
-import io.appium.uiautomator2.model.settings.EnableNotificationListener;
 import io.appium.uiautomator2.server.WDStatus;
 import io.appium.uiautomator2.unittest.test.internal.BaseTest;
+import io.appium.uiautomator2.unittest.test.internal.NettyStatus;
 import io.appium.uiautomator2.unittest.test.internal.Response;
+import io.appium.uiautomator2.unittest.test.internal.RootRequired;
 import io.appium.uiautomator2.unittest.test.internal.SkipHeadlessDevices;
 import io.appium.uiautomator2.utils.Device;
 
+import static android.support.test.InstrumentationRegistry.getInstrumentation;
+import static io.appium.uiautomator2.model.settings.Settings.ENABLE_NOTIFICATION_LISTENER;
+import static io.appium.uiautomator2.unittest.test.internal.Client.waitForNettyStatus;
 import static io.appium.uiautomator2.unittest.test.internal.TestUtils.getJsonObjectCountInJsonArray;
 import static io.appium.uiautomator2.unittest.test.internal.TestUtils.waitForElement;
 import static io.appium.uiautomator2.unittest.test.internal.TestUtils.waitForElementInvisibility;
@@ -43,16 +51,18 @@ import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceComma
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.findElements;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.getDeviceSize;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.getRotation;
-import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands
-        .getScreenOrientation;
+import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.getScreenOrientation;
+import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.getSettings;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.rotateScreen;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.screenshot;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.scrollTo;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.setRotation;
 import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.updateSetting;
+import static io.appium.uiautomator2.unittest.test.internal.commands.DeviceCommands.updateSettings;
 import static io.appium.uiautomator2.unittest.test.internal.commands.ElementCommands.click;
 import static io.appium.uiautomator2.unittest.test.internal.commands.ElementCommands.getAttribute;
 import static io.appium.uiautomator2.unittest.test.internal.commands.ElementCommands.getText;
+import static io.appium.uiautomator2.unittest.test.internal.commands.ElementCommands.sendKeys;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -103,9 +113,9 @@ public class DeviceCommandsTest extends BaseTest {
         Response response = findElement(By.accessibilityId("Views"));
         clickAndWaitForStaleness(response.getElementId());
 
-        By androidUiAutomator = By.androidUiAutomator("new UiScrollable(new UiSelector()"
-                + ".resourceId(\"android:id/list\")).scrollIntoView("
-                + "new UiSelector().text(\"Radio Group\"));");
+        By androidUiAutomator = By.androidUiAutomator("new UiSelector().text(\"Radio Group\");" +
+                "new UiScrollable(new UiSelector().resourceId(\"android:id/list\"))" +
+                ".scrollIntoView(new UiSelector().text(\"Radio Group\"));");
         response = findElement(androidUiAutomator);
         assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
         click(response.getElementId());
@@ -216,7 +226,7 @@ public class DeviceCommandsTest extends BaseTest {
         rotateMap = new JSONObject().put("x", 0).put("y", 0)
                 .put("z", 10);
         response = setRotation(rotateMap);
-        assertEquals(WDStatus.UNKNOWN_COMMAND.code(), response.getStatus());
+        assertEquals(WDStatus.INVALID_ELEMENT_COORDINATES.code(), response.getStatus());
     }
 
     /**
@@ -354,7 +364,6 @@ public class DeviceCommandsTest extends BaseTest {
 
     @Test
     public void toastVerificationTest() throws JSONException {
-        updateSetting(EnableNotificationListener.SETTING_NAME, true);
         startActivity(".view.PopupMenu1");
         Response response = findElement(By.accessibilityId("Make a Popup!"));
         click(response.getElementId());
@@ -409,6 +418,7 @@ public class DeviceCommandsTest extends BaseTest {
         scrollTo("Views"); // Due to 'Views' option not visible on small screen
         Response response = findElement(By.accessibilityId("Views"));
         clickAndWaitForStaleness(response.getElementId());
+        waitForElement(By.accessibilityId("Buttons"));
 
         String scrollToText = "WebView";
         By by = By.accessibilityId(scrollToText);
@@ -426,6 +436,7 @@ public class DeviceCommandsTest extends BaseTest {
     public void screenshotTest() throws JSONException {
         Response response = findElement(By.accessibilityId("Accessibility"));
         clickAndWaitForStaleness(response.getElementId());
+        waitForElement(By.accessibilityId("Custom View"));
 
         response = screenshot();
         String value = response.getValue();
@@ -437,4 +448,128 @@ public class DeviceCommandsTest extends BaseTest {
         assertTrue(bitmap.sameAs(uiAutoBitmap));
     }
 
+    @Test
+    public void shouldBeAbleToUpdateSettings() throws JSONException {
+        Response response = getSettings();
+        JSONObject defaultSettings = response.getValue();
+        Map<String, Object> settings = new HashMap<>();
+        settings.put("actionAcknowledgmentTimeout", 123);
+        settings.put("allowInvisibleElements", true);
+        settings.put("ignoreUnimportantViews", true);
+        settings.put("elementResponseAttributes", "text");
+        settings.put("enableNotificationListener", false);
+        settings.put("keyInjectionDelay", 10);
+        settings.put("scrollAcknowledgmentTimeout", 300);
+        settings.put("shouldUseCompactResponses", false);
+        settings.put("waitForIdleTimeout", 50001);
+        settings.put("waitForSelectorTimeout", 10);
+        settings.put("shutdownOnPowerDisconnect", false);
+        try {
+            for (Map.Entry<String, Object> entry : settings.entrySet()) {
+                updateSetting(entry.getKey(), entry.getValue());
+            }
+            response = getSettings();
+            JSONObject jsonObject = response.getValue();
+            for (Map.Entry<String, Object> entry : settings.entrySet()) {
+                assertEquals(entry.getValue(), jsonObject.get(entry.getKey()));
+            }
+        } finally {
+            updateSettings(defaultSettings);
+        }
+    }
+
+    @Test
+    public void shouldBeAbleToFindElementViaUiSelectorWithQuotesInParams() throws JSONException {
+        startActivity(".view.TextFields");
+        Response response = waitForElement(By.id("io.appium.android.apis:id/edit"));
+        sendKeys(response.getElementId(), "Use a \"tel:\" URL");
+        By androidUiAutomator = By.androidUiAutomator("new UiSelector().textContains(" +
+                "\"Use a \\\"tel:\\\" URL\");");
+        response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    public void shouldBeAbleToFindElementViaUiSelectorWithParenthesesInParams() throws JSONException {
+        startActivity(".view.TextFields");
+        Response response = waitForElement(By.id("io.appium.android.apis:id/edit"));
+        sendKeys(response.getElementId(), "(415)");
+        By androidUiAutomator = By.androidUiAutomator("new UiSelector().textContains(" +
+                "\"(415)\");");
+        response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    public void shouldBeAbleToFindElementViaUiSelectorWithCommasInParams() throws JSONException {
+        startActivity(".view.TextFields");
+        Response response = waitForElement(By.id("io.appium.android.apis:id/edit"));
+        sendKeys(response.getElementId(), "Expressway, Suite 400, Austin");
+        By androidUiAutomator = By.androidUiAutomator("new UiSelector().text(" +
+                "\"Expressway, Suite 400, Austin\");");
+        response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    public void shouldBeAbleToFindElementViaUiScrollableScrollIntoView() throws JSONException {
+        startActivity(".view.List1");
+        waitForElement(By.id("android:id/list"));
+        By androidUiAutomator = By.androidUiAutomator(
+                "new UiScrollable(new UiSelector().resourceId(\"android:id/list\"))" +
+                        ".scrollIntoView(new UiSelector().text(\"Beer Cheese\"));");
+        Response response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    public void shouldBeAbleToFindElementViaUiScrollableScrollTextIntoView() throws JSONException {
+        startActivity(".view.List1");
+        waitForElement(By.id("android:id/list"));
+        By androidUiAutomator = By.androidUiAutomator(
+                "new UiScrollable(new UiSelector(). resourceId(\"android:id/list\"))" +
+                        ".scrollTextIntoView(\"Beer Cheese\");");
+        Response response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    public void shouldBeAbleToFindElementViaUiScrollableGetChildByDescription() throws JSONException {
+        startActivity(".view.ScrollBar1");
+        waitForElement(By.accessibilityId("Lorem ipsum dolor sit amet."));
+        By androidUiAutomator = By.androidUiAutomator(
+                " new UiScrollable (new UiSelector() .className (android.widget.ScrollView))" +
+                        ". getChildByDescription ( new UiSelector() " +
+                        ".className( android.widget.TextView ),\"Lorem ipsum dolor sit amet.\"," +
+                        "true ) ; ");
+        Response response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    public void scrollIntoViewShouldNotThrowExceptionIfScrollableDoesNotExist() throws
+            JSONException {
+        startActivity(".view.ScrollBar1");
+        waitForElement(By.accessibilityId("Lorem ipsum dolor sit amet."));
+        By androidUiAutomator = By.androidUiAutomator(
+                "new UiScrollable(new UiSelector().text(\"test\"))" +
+                        ".scrollIntoView(new UiSelector().text(\"Lorem ipsum dolor sit amet.\"))");
+        Response response = findElement(androidUiAutomator);
+        assertTrue(androidUiAutomator + " should be found", response.isSuccessful());
+    }
+
+    @Test
+    @RootRequired
+    public void shouldShutdownServerOnPowerDisconnect() throws IOException, JSONException {
+        try {
+            UiDevice.getInstance(getInstrumentation()).executeShellCommand(
+                    "su 0 am broadcast -a android.intent.action.ACTION_POWER_DISCONNECTED " +
+                            "io.appium.uiautomator2.e2etest &");
+            waitForNettyStatus(NettyStatus.OFFLINE);
+            assertTrue(serverInstrumentation.isServerStopped());
+        } finally {
+            serverInstrumentation = null;
+            startServer();
+        }
+    }
 }

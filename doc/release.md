@@ -1,6 +1,8 @@
 **Publishing:**
 
-Publishing is a matter of running the [npm version command](https://docs.npmjs.com/cli/version):
+* Before publishing, update the release version in build.gradle to be the same as in package.json
+
+* Publishing is a matter of running the [npm version command](https://docs.npmjs.com/cli/version):
 ```shell
 npm version major|minor|patch
 ```

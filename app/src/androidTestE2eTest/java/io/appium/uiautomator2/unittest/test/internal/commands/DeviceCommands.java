@@ -15,6 +15,9 @@
  */
 package io.appium.uiautomator2.unittest.test.internal.commands;
 
+import android.support.annotation.Nullable;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -149,7 +152,7 @@ public class DeviceCommands {
     }
 
     /**
-     * return the appStrings
+     * update setting
      *
      * @return Response from UiAutomator2 server
      * @throws JSONException
@@ -159,6 +162,27 @@ public class DeviceCommands {
         JSONObject postBody = new JSONObject();
         postBody.put("settings", new JSONObject().put(settingName, settingValue));
         return Client.post("/appium/settings", postBody);
+    }
+
+    /**
+     * update settings
+     *
+     * @return Response from UiAutomator2 server
+     * @throws JSONException
+     */
+    public static Response updateSettings(JSONObject settings) throws
+            JSONException {
+        return Client.post("/appium/settings", new JSONObject().put("settings",settings));
+    }
+
+    /**
+     * return settings
+     *
+     * @return Response from UiAutomator2 server
+     * @throws JSONException
+     */
+    public static Response getSettings() {
+        return Client.get("/appium/settings");
     }
 
     /**
@@ -190,5 +214,57 @@ public class DeviceCommands {
      */
     public static Response screenshot() {
         return Client.get("/screenshot");
+    }
+
+    /**
+     * Accepts an on-screen alert
+     *
+     * @param buttonLabel optional button label to click on
+     * @return Response from UiAutomator2 server
+     * @throws JSONException
+     */
+    public static Response acceptAlert(@Nullable String buttonLabel) throws JSONException {
+        final JSONObject payload = new JSONObject();
+        if (buttonLabel != null) {
+            payload.put("buttonLabel", buttonLabel);
+        }
+        return Client.post("/alert/accept", payload);
+    }
+
+    /**
+     * Dismisses an on-screen alert
+     *
+     * @param buttonLabel optional button label to click on
+     * @return Response from UiAutomator2 server
+     * @throws JSONException
+     */
+    public static Response dismissAlert(@Nullable String buttonLabel) throws JSONException {
+        final JSONObject payload = new JSONObject();
+        if (buttonLabel != null) {
+            payload.put("buttonLabel", buttonLabel);
+        }
+        return Client.post("/alert/dismiss", payload);
+    }
+
+    /**
+     * Gets the text content of an on-screen alert
+     *
+     * @return Response from UiAutomator2 server
+     */
+    public static Response getAlertText() {
+        return Client.get("/alert/text");
+    }
+
+    /**
+     * Performs W3C action
+     *
+     * @param actions valid W3C actions list
+     * @return Response from UiAutomator2 server
+     * @throws JSONException
+     */
+    public static Response performActions(JSONArray actions) throws JSONException {
+        JSONObject payload = new JSONObject();
+        payload.put("actions", actions);
+        return Client.post("/actions", payload);
     }
 }

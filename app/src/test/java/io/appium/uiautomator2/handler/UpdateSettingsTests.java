@@ -18,11 +18,8 @@ package io.appium.uiautomator2.handler;
 
 import org.json.JSONException;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -35,18 +32,36 @@ import io.appium.uiautomator2.http.AppiumResponse;
 import io.appium.uiautomator2.http.IHttpRequest;
 import io.appium.uiautomator2.model.Session;
 import io.appium.uiautomator2.model.settings.AbstractSetting;
+import io.appium.uiautomator2.model.settings.ActionAcknowledgmentTimeout;
 import io.appium.uiautomator2.model.settings.AllowInvisibleElements;
 import io.appium.uiautomator2.model.settings.CompressedLayoutHierarchy;
+import io.appium.uiautomator2.model.settings.ElementResponseAttributes;
 import io.appium.uiautomator2.model.settings.EnableNotificationListener;
+import io.appium.uiautomator2.model.settings.KeyInjectionDelay;
+import io.appium.uiautomator2.model.settings.ScrollAcknowledgmentTimeout;
+import io.appium.uiautomator2.model.settings.Settings;
+import io.appium.uiautomator2.model.settings.ShouldUseCompactResponses;
+import io.appium.uiautomator2.model.settings.ShutdownOnPowerDisconnect;
 import io.appium.uiautomator2.model.settings.WaitForIdleTimeout;
+import io.appium.uiautomator2.model.settings.WaitForSelectorTimeout;
 import io.appium.uiautomator2.server.WDStatus;
 
+import static io.appium.uiautomator2.model.settings.Settings.ACTION_ACKNOWLEDGMENT_TIMEOUT;
+import static io.appium.uiautomator2.model.settings.Settings.ALLOW_INVISIBLE_ELEMENTS;
+import static io.appium.uiautomator2.model.settings.Settings.COMPRESSED_LAYOUT_HIERARCHY;
+import static io.appium.uiautomator2.model.settings.Settings.ELEMENT_RESPONSE_ATTRIBUTES;
+import static io.appium.uiautomator2.model.settings.Settings.ENABLE_NOTIFICATION_LISTENER;
+import static io.appium.uiautomator2.model.settings.Settings.KEY_INJECTION_DELAY;
+import static io.appium.uiautomator2.model.settings.Settings.SCROLL_ACKNOWLEDGMENT_TIMEOUT;
+import static io.appium.uiautomator2.model.settings.Settings.SHOULD_USE_COMPACT_RESPONSES;
+import static io.appium.uiautomator2.model.settings.Settings.SHUTDOWN_ON_POWER_DISCONNECT;
+import static io.appium.uiautomator2.model.settings.Settings.WAIT_FOR_IDLE_TIMEOUT;
+import static io.appium.uiautomator2.model.settings.Settings.WAIT_FOR_SELECTOR_TIMEOUT;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -54,7 +69,6 @@ import static org.mockito.Mockito.verify;
 
 @RunWith(PowerMockRunner.class)
 public class UpdateSettingsTests {
-
     private static final String SETTING_NAME = "my_setting";
     private static final String SETTING_VALUE = "my_value";
 
@@ -68,12 +82,12 @@ public class UpdateSettingsTests {
     private IHttpRequest req;
 
     @Before
-    public void setup() throws InstantiationException, IllegalAccessException, JSONException {
+    public void setUp() throws JSONException {
         Session.capabilities.remove(SETTING_NAME);
         HashMap<String, Object> payload = new HashMap<>();
         payload.put(SETTING_NAME, SETTING_VALUE);
 
-        doNothing().when(mySetting).updateSetting(Matchers.anyObject());
+        doNothing().when(mySetting).update(any());
 
         doReturn("sessionId").when(updateSettings).getSessionId(req);
         doReturn(payload).when(updateSettings).getPayload(req, "settings");
@@ -81,34 +95,69 @@ public class UpdateSettingsTests {
     }
 
     @Test
-    public void shouldBeAbleToReturnAllowInvisibleElementsSetting() throws InstantiationException, IllegalAccessException {
-        verifySettingIsAvailable(AllowInvisibleElements.SETTING_NAME, AllowInvisibleElements.class);
+    public void shouldBeAbleToReturnAllowInvisibleElementsSetting() {
+        verifySettingIsAvailable(ALLOW_INVISIBLE_ELEMENTS, AllowInvisibleElements.class);
     }
 
     @Test
-    public void shouldBeAbleToReturnCompressedLayoutHierarchySetting() throws InstantiationException, IllegalAccessException {
-        verifySettingIsAvailable(CompressedLayoutHierarchy.SETTING_NAME, CompressedLayoutHierarchy.class);
+    public void shouldBeAbleToReturnCompressedLayoutHierarchySetting() {
+        verifySettingIsAvailable(COMPRESSED_LAYOUT_HIERARCHY, CompressedLayoutHierarchy.class);
     }
 
     @Test
-    public void shouldBeAbleToReturnAllowNotificationListenerSetting() throws InstantiationException, IllegalAccessException {
-        verifySettingIsAvailable(EnableNotificationListener.SETTING_NAME, EnableNotificationListener.class);
+    public void shouldBeAbleToReturnAllowNotificationListenerSetting() {
+        verifySettingIsAvailable(ENABLE_NOTIFICATION_LISTENER, EnableNotificationListener.class);
     }
 
     @Test
-    public void shouldBeAbleToReturnWaitForIdleTimeoutSetting() throws InstantiationException, IllegalAccessException {
-        verifySettingIsAvailable(WaitForIdleTimeout.SETTING_NAME, WaitForIdleTimeout.class);
+    public void shouldBeAbleToReturnWaitForIdleTimeoutSetting() {
+        verifySettingIsAvailable(WAIT_FOR_IDLE_TIMEOUT, WaitForIdleTimeout.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnWaitForSelectorTimeoutSetting() {
+        verifySettingIsAvailable(WAIT_FOR_SELECTOR_TIMEOUT, WaitForSelectorTimeout.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnActionAcknowledgmentTimeout() {
+        verifySettingIsAvailable(ACTION_ACKNOWLEDGMENT_TIMEOUT, ActionAcknowledgmentTimeout.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnKeyInjectionDelay() {
+        verifySettingIsAvailable(KEY_INJECTION_DELAY, KeyInjectionDelay.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnScrollAcknowledgmentTimeout() {
+        verifySettingIsAvailable(SCROLL_ACKNOWLEDGMENT_TIMEOUT, ScrollAcknowledgmentTimeout.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnElementResponseAttributesSetting() {
+        verifySettingIsAvailable(ELEMENT_RESPONSE_ATTRIBUTES, ElementResponseAttributes.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnShouldUseCompactResponsesSetting() {
+        verifySettingIsAvailable(SHOULD_USE_COMPACT_RESPONSES, ShouldUseCompactResponses.class);
+    }
+
+    @Test
+    public void shouldBeAbleToReturnShutdownOnPowerDisconnectSetting() {
+        verifySettingIsAvailable(SHUTDOWN_ON_POWER_DISCONNECT, ShutdownOnPowerDisconnect.class);
     }
 
     @Test(expected=UnsupportedSettingException.class)
-    public void shouldThrowExceptionIfSettingIsNotSupported() throws InstantiationException, IllegalAccessException {
+    public void shouldThrowExceptionIfSettingIsNotSupported() {
         updateSettings.getSetting("unsupported_setting");
     }
 
     @Test
     public void shouldBeAbleToUpdateSetting() {
-        AppiumResponse response = updateSettings.safeHandle(req);
-        verify(mySetting).updateSetting(SETTING_VALUE);
+        AppiumResponse response = updateSettings.handle(req);
+        verify(mySetting).update(SETTING_VALUE);
         assertEquals(Session.capabilities.get(SETTING_NAME), SETTING_VALUE);
         assertEquals(WDStatus.SUCCESS.code(), response.getStatus());
         assertEquals(true, response.getValue());
@@ -116,13 +165,13 @@ public class UpdateSettingsTests {
 
     @Test
     public void shouldReturnResponseWithUnknownErrorStatusIfFailed() {
-        doThrow(new UiAutomator2Exception("error")).when(mySetting).updateSetting(Matchers.anyObject());
-        AppiumResponse resp = updateSettings.safeHandle(req);
+        doThrow(new UiAutomator2Exception("error")).when(mySetting).update(any());
+        AppiumResponse resp = updateSettings.handle(req);
         assertEquals(WDStatus.UNKNOWN_ERROR.code(), resp.getStatus());
         assertThat(resp.getValue().toString(), containsString("UiAutomator2Exception: error"));
     }
 
-    private void verifySettingIsAvailable(String settingName, Class<? extends AbstractSetting> clazz) throws InstantiationException, IllegalAccessException {
-        assertThat(updateSettings.getSetting(settingName), instanceOf(clazz));
+    private void verifySettingIsAvailable(Settings setting, Class<? extends AbstractSetting> clazz) {
+        assertThat(updateSettings.getSetting(setting.toString()), instanceOf(clazz));
     }
 }

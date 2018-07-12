@@ -18,7 +18,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.appium.uiautomator2.common.exceptions.ElementNotFoundException;
 import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.UiAutomator2Exception;
 import io.appium.uiautomator2.utils.Device;
@@ -72,26 +71,26 @@ public class CustomUiDevice {
         return INSTANCE;
     }
 
-    public Instrumentation getInstrumentation(){
+    public Instrumentation getInstrumentation() {
         return mInstrumentation;
     }
 
     /**
      * Returns the first object to match the {@code selector} criteria.
      */
-    public Object findObject(Object selector) throws ClassNotFoundException, ElementNotFoundException, InvalidSelectorException, UiAutomator2Exception {
+    public Object findObject(Object selector) throws ClassNotFoundException, UiAutomator2Exception {
 
-        AccessibilityNodeInfo node ;
+        AccessibilityNodeInfo node;
         Device.waitForIdle();
         if (selector instanceof BySelector) {
             node = (AccessibilityNodeInfo) invoke(METHOD_FIND_MATCH, ByMatcher, Device.getUiDevice(), selector, getWindowRoots());
         } else if (selector instanceof NodeInfoList) {
-            node = ((NodeInfoList) selector).getNodeList().size()>0 ? ((NodeInfoList) selector).getNodeList().get(0) : null;
+            node = ((NodeInfoList) selector).getNodeList().size() > 0 ? ((NodeInfoList) selector).getNodeList().get(0) : null;
             selector = By.clazz(node.getClassName().toString());
-        }  else if (selector instanceof AccessibilityNodeInfo) {
+        } else if (selector instanceof AccessibilityNodeInfo) {
             node = (AccessibilityNodeInfo) selector;
             selector = By.clazz(node.getClassName().toString());
-        }else if (selector instanceof UiSelector) {
+        } else if (selector instanceof UiSelector) {
             UiObject uiObject = getUiDevice().findObject((UiSelector) selector);
             if (uiObject.exists()) {
                 return uiObject;
@@ -101,7 +100,7 @@ public class CustomUiDevice {
             throw new InvalidSelectorException("Selector of type " + selector.getClass().getName() + " not supported");
         }
         try {
-            if(node == null){
+            if (node == null) {
                 return null;
             }
             Class uiObject2 = Class.forName("android.support.test.uiautomator.UiObject2");
@@ -124,15 +123,7 @@ public class CustomUiDevice {
                 SystemClock.sleep(Math.min(200, remainingMillis));
             }
 
-        } catch (InvocationTargetException e) {
-            final String msg = String.format("error while creating  UiObject2 object");
-            Logger.error(msg + " " + e);
-            throw new UiAutomator2Exception(msg, e);
-        } catch (InstantiationException e) {
-            final String msg = String.format("error while creating  UiObject2 object");
-            Logger.error(msg + " " + e);
-            throw new UiAutomator2Exception(msg, e);
-        } catch (IllegalAccessException e) {
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
             final String msg = String.format("error while creating  UiObject2 object");
             Logger.error(msg + " " + e);
             throw new UiAutomator2Exception(msg, e);
@@ -142,18 +133,16 @@ public class CustomUiDevice {
     /**
      * Returns List<object> to match the {@code selector} criteria.
      */
-    public List<Object> findObjects(Object selector) throws ClassNotFoundException, InvalidSelectorException, UiAutomator2Exception {
-
+    public List<Object> findObjects(Object selector) throws ClassNotFoundException, UiAutomator2Exception {
         List<Object> ret = new ArrayList<>();
 
-        ArrayList<AccessibilityNodeInfo> list = new ArrayList<AccessibilityNodeInfo>();
+        ArrayList<AccessibilityNodeInfo> list;
         if (selector instanceof BySelector) {
             ReflectionUtils.getClass("android.support.test.uiautomator.ByMatcher");
             Object nodes = invoke(METHOD_FIND_MATCHS, ByMatcher, getUiDevice(), selector, getWindowRoots());
             list = (ArrayList) nodes;
         } else if (selector instanceof NodeInfoList) {
             list = ((NodeInfoList) selector).getNodeList();
-
         } else {
             throw new InvalidSelectorException("Selector of type " + selector.getClass().getName() + " not supported");
         }
@@ -164,17 +153,9 @@ public class CustomUiDevice {
                 cons.setAccessible(true);
                 selector = By.clazz(node.getClassName().toString());
                 Object[] constructorParams = {getUiDevice(), selector, node};
-                ret.add((UiObject2) cons.newInstance(constructorParams));
-            } catch (InvocationTargetException e) {
-                final String msg = String.format("error while creating  UiObject2 object:");
-                Logger.error(msg + " " + e);
-                throw new UiAutomator2Exception(msg, e);
-            } catch (InstantiationException e) {
-                final String msg = String.format("error while creating  UiObject2 object");
-                Logger.error(msg + " " + e);
-                throw new UiAutomator2Exception(msg, e);
-            } catch (IllegalAccessException e) {
-                final String msg = String.format("error while creating  UiObject2 object");
+                ret.add(cons.newInstance(constructorParams));
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                final String msg = "error while creating  UiObject2 object";
                 Logger.error(msg + " " + e);
                 throw new UiAutomator2Exception(msg, e);
             }
@@ -186,10 +167,10 @@ public class CustomUiDevice {
     /**
      * Returns a list containing the root {@link AccessibilityNodeInfo}s for each active window
      */
-    AccessibilityNodeInfo[] getWindowRoots() throws UiAutomator2Exception {
+    private AccessibilityNodeInfo[] getWindowRoots() throws UiAutomator2Exception {
         Device.waitForIdle();
         ArrayList<AccessibilityNodeInfo> ret = new ArrayList<>();
-        /**
+        /*
          * TODO: MULTI_WINDOW is disabled, UIAutomatorViewer captures active window properties and
          * end users always relay on UIAutomatorViewer while writing tests.
          * If we enable MULTI_WINDOW it effects end users.

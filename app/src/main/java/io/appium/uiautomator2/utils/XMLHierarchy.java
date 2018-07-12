@@ -31,15 +31,12 @@ import java.util.regex.Pattern;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.UiAutomator2Exception;
 import io.appium.uiautomator2.core.AccessibilityNodeInfoDumper;
 import io.appium.uiautomator2.model.XPathFinder;
-
 
 public abstract class XMLHierarchy {
     // XML 1.0 Legal Characters (http://stackoverflow.com/a/4237934/347155)
@@ -47,17 +44,6 @@ public abstract class XMLHierarchy {
     private final static Pattern XML10Pattern = Pattern.compile("[^" + "\u0009\r\n" +
             "\u0020-\uD7FF" + "\uE000-\uFFFD" + "\ud800\udc00-\udbff\udfff" + "]");
     private final static String DEFAULT_VIEW_NAME = "android.view.View";
-
-    private static XPathExpression compileXpath(String xpathExpression) throws InvalidSelectorException {
-        XPath xpath = XPathFactory.newInstance().newXPath();
-        XPathExpression exp = null;
-        try {
-            exp = xpath.compile(xpathExpression);
-        } catch (XPathExpressionException e) {
-            throw new InvalidSelectorException("Invalid XPath expression: ", e);
-        }
-        return exp;
-    }
 
     public static InputSource getRawXMLHierarchy() throws UiAutomator2Exception {
         AccessibilityNodeInfo root = XPathFinder.getRootAccessibilityNode();
@@ -78,14 +64,14 @@ public abstract class XMLHierarchy {
     public static Node formatXMLInput(InputSource input) {
         XPath xpath = XPathFactory.newInstance().newXPath();
 
-        Node root = null;
+        final Node root;
         try {
             root = (Node) xpath.evaluate("/", input, XPathConstants.NODE);
         } catch (XPathExpressionException e) {
-            throw new RuntimeException("Could not read xml hierarchy: ", e);
+            throw new UiAutomator2Exception("Could not read xml hierarchy: ", e);
         }
 
-        HashMap<String, Integer> instances = new HashMap<String, Integer>();
+        HashMap<String, Integer> instances = new HashMap<>();
 
         // rename all the nodes with their "class" attribute
         // add an instance attribute
@@ -112,7 +98,6 @@ public abstract class XMLHierarchy {
     // we also take this chance to clean class names that might have dollar signs in
     // them (and other odd characters)
     private static void visitNode(Node node, HashMap<String, Integer> instances) {
-
         Document doc = node.getOwnerDocument();
         NamedNodeMap attributes = node.getAttributes();
 
@@ -147,7 +132,7 @@ public abstract class XMLHierarchy {
         String fixedName = name
                 .replaceAll("[$@#&]", ".")
                 // https://github.com/appium/appium/issues/9934
-                .replaceAll("[ˊ\\s]", "");
+                .replaceAll("[ˋˊ\\s]", ""); // "ˋ" is \xCB\x8B in UTF-8
         fixedName = safeCharSeqToString(fixedName)
                 // https://github.com/appium/appium/issues/9934
                 .replace("?", "")

@@ -61,17 +61,18 @@ public class W3CActionsTransformationTests {
         assertThat(eventsChain.valueAt(1).size(), equalTo(0));
     }
 
-
     @Test
     public void verifyValidInputEventsChainIsCompiledForSingleKeysGesture() throws JSONException {
+        final int keyCode = 0xE019;
+        final int metaCode = 0xE009;
         final JSONArray actionJson = new JSONArray("[ {" +
                 "\"type\": \"key\"," +
                 "\"id\": \"keyboard\"," +
                 "\"actions\": [" +
-                "{\"type\": \"keyDown\", \"value\": \"\u2000\"}," +
-                "{\"type\": \"keyDown\", \"value\": \"A\"}," +
-                "{\"type\": \"keyUp\", \"value\": \"A\"}," +
-                "{\"type\": \"keyUp\", \"value\": \"\u2000\"}]" +
+                "{\"type\": \"keyDown\", \"value\": \"\uE009\"}," +
+                "{\"type\": \"keyDown\", \"value\": \"\uE019\"}," +
+                "{\"type\": \"keyUp\", \"value\": \"\uE019\"}," +
+                "{\"type\": \"keyUp\", \"value\": \"\uE009\"}]" +
                 "} ]");
         final LongSparseArray<List<InputEventParams>> eventsChain = actionsToInputEventsMapping(
                 preprocessActions(actionJson)
@@ -87,19 +88,19 @@ public class W3CActionsTransformationTests {
 
         assertThat(((KeyInputEventParams) generatedParams.get(0)).keyAction,
                 equalTo(KeyEvent.ACTION_DOWN));
-        assertThat(((KeyInputEventParams) generatedParams.get(0)).keyCode, equalTo(0x2000));
+        assertThat(((KeyInputEventParams) generatedParams.get(0)).keyCode, equalTo(metaCode));
 
         assertThat(((KeyInputEventParams) generatedParams.get(1)).keyAction,
                 equalTo(KeyEvent.ACTION_DOWN));
-        assertThat(((KeyInputEventParams) generatedParams.get(1)).keyCode, equalTo(65));
+        assertThat(((KeyInputEventParams) generatedParams.get(1)).keyCode, equalTo(keyCode));
 
         assertThat(((KeyInputEventParams) generatedParams.get(2)).keyAction,
                 equalTo(KeyEvent.ACTION_UP));
-        assertThat(((KeyInputEventParams) generatedParams.get(2)).keyCode, equalTo(65));
+        assertThat(((KeyInputEventParams) generatedParams.get(2)).keyCode, equalTo(keyCode));
 
         assertThat(((KeyInputEventParams) generatedParams.get(3)).keyAction,
                 equalTo(KeyEvent.ACTION_UP));
-        assertThat(((KeyInputEventParams) generatedParams.get(3)).keyCode, equalTo(0x2000));
+        assertThat(((KeyInputEventParams) generatedParams.get(3)).keyCode, equalTo(metaCode));
     }
 
     @Test

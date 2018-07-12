@@ -18,21 +18,21 @@ package io.appium.uiautomator2.model.settings;
 
 import android.support.test.uiautomator.Configurator;
 
-public class WaitForIdleTimeout extends AbstractSetting<Integer> {
+public class WaitForIdleTimeout extends AbstractSetting<Long> {
 
-    public static final String SETTING_NAME = "waitForIdleTimeout";
+    private static final String SETTING_NAME = "waitForIdleTimeout";
 
     public WaitForIdleTimeout() {
-        super(Integer.class);
+        super(Long.class, SETTING_NAME);
     }
 
     @Override
-    public String getSettingName() {
-        return SETTING_NAME;
+    public Long getValue() {
+        return Configurator.getInstance().getWaitForIdleTimeout();
     }
 
     @Override
-    protected void apply(Integer timeout) {
+    protected void apply(Long timeout) {
         Configurator.getInstance().setWaitForIdleTimeout(timeout);
     }
 

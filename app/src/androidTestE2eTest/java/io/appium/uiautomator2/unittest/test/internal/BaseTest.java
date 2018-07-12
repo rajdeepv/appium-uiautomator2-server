@@ -32,11 +32,9 @@ import org.junit.runners.MethodSorters;
 import java.io.IOException;
 
 import io.appium.uiautomator2.model.By;
-import io.appium.uiautomator2.model.settings.EnableNotificationListener;
-import io.appium.uiautomator2.server.ServerConfig;
+import io.appium.uiautomator2.model.settings.Settings;
 import io.appium.uiautomator2.server.ServerInstrumentation;
 import io.appium.uiautomator2.unittest.test.Config;
-import io.netty.channel.ConnectTimeoutException;
 
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -53,9 +51,9 @@ import static org.junit.Assert.assertNotNull;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(AndroidJUnit4.class)
 public abstract class BaseTest {
-
-    private static ServerInstrumentation serverInstrumentation;
+    protected static ServerInstrumentation serverInstrumentation;
     private static Context ctx;
+
     @Rule
     public TestWatcher watcher = new TestWatcher();
 
@@ -63,15 +61,13 @@ public abstract class BaseTest {
      * start io.appium.uiautomator2.server and launch the application main activity
      */
     @BeforeClass
-    public static void beforeStartServer() throws InterruptedException,
-            JSONException, IOException {
+    public static void startServer() throws JSONException, IOException {
         if (serverInstrumentation != null) {
             return;
         }
         assertNotNull(getUiDevice());
         ctx = InstrumentationRegistry.getInstrumentation().getContext();
-        serverInstrumentation = ServerInstrumentation.getInstance(ctx, ServerConfig
-                .getServerPort());
+        serverInstrumentation = ServerInstrumentation.getInstance();
         Logger.info("Starting Server");
         serverInstrumentation.startServer();
         Client.waitForNettyStatus(NettyStatus.ONLINE);
@@ -83,7 +79,7 @@ public abstract class BaseTest {
     }
 
     @AfterClass
-    public static void stopSever() throws InterruptedException, ConnectTimeoutException {
+    public static void stopSever() {
         deleteSession();
         if (serverInstrumentation == null) {
             return;
@@ -94,8 +90,7 @@ public abstract class BaseTest {
     }
 
     @Before
-    public void launchAUT() throws InterruptedException, JSONException {
-        updateSetting(EnableNotificationListener.SETTING_NAME, false);
+    public void launchAUT() throws JSONException {
         startActivity(Config.APP_NAME);
         waitForElement(By.accessibilityId("Accessibility"));
     }
@@ -108,5 +103,4 @@ public abstract class BaseTest {
         click(elementId);
         waitForElementInvisibility(elementId);
     }
-
 }

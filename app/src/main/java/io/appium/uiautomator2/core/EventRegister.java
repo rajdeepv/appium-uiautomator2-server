@@ -16,15 +16,15 @@ import io.appium.uiautomator2.utils.Logger;
 
 public abstract class EventRegister {
 
-    public static int EVENT_COOLDOWN_MS = 750;
-    private static String EVENT_COOLDOWN_CAP = "scrollEventTimeout";
+    public static final int EVENT_COOLDOWN_MS = 750;
+    private static final String EVENT_COOLDOWN_CAP = "scrollEventTimeout";
 
-    public static Boolean runAndRegisterScrollEvents (ReturningRunnable<Boolean> runnable, long timeout) {
+    public static Boolean runAndRegisterScrollEvents(ReturningRunnable<Boolean> runnable, long timeout) {
         // turn off listening to notifications since it interferes with us listening for the scroll
         // event here
         NotificationListener listener = NotificationListener.getInstance();
 
-        boolean notificationListenerActive = listener.isListening;
+        boolean notificationListenerActive = listener.isListening();
         if (notificationListenerActive) {
             listener.stop();
         }
@@ -37,7 +37,9 @@ public abstract class EventRegister {
         UiAutomation automation = UiAutomatorBridge.getInstance().getUiAutomation();
         try {
             automation.executeAndWaitForEvent(runnable, filter, timeout);
-        } catch (TimeoutException ign) {}
+        } catch (TimeoutException ign) {
+            // ignore
+        }
 
         // if we have caught any events in our net, snatch the last one
         if (events.size() > 0) {
@@ -69,7 +71,7 @@ public abstract class EventRegister {
         return runnable.getResult();
     }
 
-    public static Boolean runAndRegisterScrollEvents (ReturningRunnable<Boolean> runnable) {
+    public static Boolean runAndRegisterScrollEvents(ReturningRunnable<Boolean> runnable) {
         int timeout;
         if (Session.capabilities.containsKey(EVENT_COOLDOWN_CAP)) {
             try {
@@ -87,12 +89,14 @@ public abstract class EventRegister {
 
     // https://android.googlesource.com/platform/frameworks/testing/+/master/uiautomator/library/core-src/com/android/uiautomator/core/InteractionController.java#96
     static class EventCollectingPredicate implements UiAutomation.AccessibilityEventFilter {
-        int mMask;
-        List<AccessibilityEvent> mEventsList;
+        private final int mMask;
+        private final List<AccessibilityEvent> mEventsList;
+
         EventCollectingPredicate(int mask, List<AccessibilityEvent> events) {
             mMask = mask;
             mEventsList = events;
         }
+
         @Override
         public boolean accept(AccessibilityEvent t) {
             // check current event in the list
