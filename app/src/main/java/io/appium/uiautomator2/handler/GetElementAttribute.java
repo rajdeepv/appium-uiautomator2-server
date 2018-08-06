@@ -164,6 +164,11 @@ public class GetElementAttribute extends SafeRequestHandler {
             }
             Logger.debug("Determined there were " + itemsPerRow + " items per row");
 
+            if (itemsPerRow == 0) {
+                // Need to exit. Other case we will get an ArithmeticException
+                return 0;
+            }
+
             int numRows = (int) Math.floor(itemCount / itemsPerRow);
             if (itemCount % itemsPerRow > 0) {
                 // we might have an additional part-row
