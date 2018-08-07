@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/appium/appium-uiautomator2-server",
   "scripts": {
+    "clean": "rm -rf node_modules && rm -f package-lock.json && npm install",
     "bump-gradle-version": "gulp gradle-version-update --package-version=${npm_package_version} && git add app/build.gradle",
     "build": "./gradlew clean assembleServerDebug assembleServerDebugAndroidTest && npm run move-apks",
     "move-server": "cp app/build/outputs/apk/server/debug/appium-uiautomator2-server-v${npm_package_version}.apk ./apks",
