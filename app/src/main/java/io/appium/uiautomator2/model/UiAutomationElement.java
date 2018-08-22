@@ -16,6 +16,7 @@
 
 package io.appium.uiautomator2.model;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
@@ -35,16 +36,15 @@ import io.appium.uiautomator2.utils.Logger;
 import static android.support.test.internal.util.Checks.checkNotNull;
 import static io.appium.uiautomator2.model.settings.Settings.ALLOW_INVISIBLE_ELEMENTS;
 
-
 /**
  * A UiElement that gets attributes via the Accessibility API.
  */
 @TargetApi(18)
 public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAutomationElement> {
-
-    public final static Map<AccessibilityNodeInfo, UiAutomationElement> map = new WeakHashMap<>();
+    private final static Map<AccessibilityNodeInfo, UiAutomationElement> cache = new WeakHashMap<>();
     private final Map<Attribute, Object> attributes;
     private final boolean visible;
+    @SuppressWarnings("unused")
     private final Rect visibleBounds;
     private final UiAutomationElement parent;
     private final List<UiAutomationElement> children;
@@ -88,7 +88,7 @@ public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAuto
 
         // Order matters as getVisibleBounds depends on visible
         visible = node.isVisibleToUser();
-        visibleBounds = getVisibleBounds(node);
+        visibleBounds = getVisibleBounds();
         List<UiAutomationElement> mutableChildren = buildChildren(node);
         this.children = mutableChildren == null ? null : Collections.unmodifiableList(mutableChildren);
     }
@@ -119,13 +119,11 @@ public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAuto
         this.children = mutableChildren;
     }
 
-    public static UiAutomationElement newRootElement(AccessibilityNodeInfo rawElement,
-                                                     @Nullable List<CharSequence> toastMSGs) {
-        clearData();
-        /**
-         * Injecting root element as hierarchy and adding rawElement as a child.
-         */
-        UiAutomationElement rootElement = new UiAutomationElement("hierarchy" /*root element*/, rawElement /* child nodInfo */, 0 /* index */);
+    public static UiAutomationElement rebuildForNewRoot(AccessibilityNodeInfo rawElement,
+                                                        @Nullable List<CharSequence> toastMSGs) {
+        cache.clear();
+
+        UiAutomationElement rootElement = new UiAutomationElement("hierarchy", rawElement, 0);
         if (toastMSGs != null && !toastMSGs.isEmpty()) {
             for (CharSequence toastMSG : toastMSGs) {
                 Logger.debug("Adding toastMSG to root:" + toastMSG);
@@ -135,19 +133,26 @@ public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAuto
         return rootElement;
     }
 
-    private static void clearData() {
-        map.clear();
+    @Nullable
+    public static UiAutomationElement getCachedElement(AccessibilityNodeInfo rawElement,
+                                                       AccessibilityNodeInfo windowRoot) {
+        if (cache.get(rawElement) == null) {
+            rebuildForNewRoot(windowRoot, null);
+        }
+        return cache.get(rawElement);
     }
 
-    public static UiAutomationElement getElement(AccessibilityNodeInfo rawElement, UiAutomationElement parent, int index) {
-        UiAutomationElement element = map.get(rawElement);
+    private static UiAutomationElement getOrCreateElement(AccessibilityNodeInfo rawElement,
+                                                          UiAutomationElement parent, int index) {
+        UiAutomationElement element = cache.get(rawElement);
         if (element == null) {
             element = new UiAutomationElement(rawElement, parent, index);
-            map.put(rawElement, element);
+            cache.put(rawElement, element);
         }
         return element;
     }
 
+    @Nullable
     public static String charSequenceToString(CharSequence input) {
         return input == null ? null : input.toString();
     }
@@ -164,7 +169,7 @@ public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAuto
         node.setClassName(Toast.class.getName());
         node.setPackageName("com.android.settings");
 
-        this.children.add(new UiAutomationElement(node /* AccessibilityNodeInfo */, this /* parent UiAutomationElement*/, 0 /*index*/));
+        this.children.add(new UiAutomationElement(node, this, 0));
     }
 
     private List<UiAutomationElement> buildChildren(AccessibilityNodeInfo node) {
@@ -181,7 +186,7 @@ public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAuto
                 AccessibilityNodeInfo child = node.getChild(i);
                 //Ignore if element is not visible on the screen
                 if (child != null && (child.isVisibleToUser() || isAllowInvisibleElements)) {
-                    children.add(getElement(child, this, i));
+                    children.add(getOrCreateElement(child, this, i));
                 }
             }
         }
@@ -194,7 +199,8 @@ public class UiAutomationElement extends UiElement<AccessibilityNodeInfo, UiAuto
         return rect;
     }
 
-    private Rect getVisibleBounds(AccessibilityNodeInfo node) {
+    @SuppressLint("CheckResult")
+    private Rect getVisibleBounds() {
         if (!visible) {
             return new Rect();
         }

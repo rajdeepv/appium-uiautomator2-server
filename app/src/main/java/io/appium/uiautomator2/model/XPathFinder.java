@@ -15,7 +15,6 @@
  */
 package io.appium.uiautomator2.model;
 
-import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.util.SparseArray;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -37,9 +36,7 @@ import javax.xml.xpath.XPathFactory;
 
 import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.UiAutomator2Exception;
-import io.appium.uiautomator2.core.UiAutomatorBridge;
 import io.appium.uiautomator2.utils.Attribute;
-import io.appium.uiautomator2.utils.Device;
 import io.appium.uiautomator2.utils.Logger;
 import io.appium.uiautomator2.utils.NodeInfoList;
 
@@ -53,17 +50,8 @@ public class XPathFinder implements Finder {
     private static final String UI_ELEMENT_INDEX = "uiElementIndex";
     private final String xPathString;
 
-    private XPathFinder(String xPathString) {
+    public XPathFinder(String xPathString) {
         this.xPathString = checkNotNull(xPathString);
-    }
-
-    public static NodeInfoList getNodesList(String xpathExpression,
-                                            @Nullable AccessibilityNodeInfo nodeInfo)
-            throws InvalidSelectorException {
-        final UiAutomationElement root = nodeInfo == null
-                ? XPathFinder.refreshUiElementTree()
-                : XPathFinder.refreshUiElementTree(nodeInfo);
-        return new XPathFinder(xpathExpression).find(root);
     }
 
     private static void setNodeLocalName(Element element, String className) {
@@ -135,41 +123,6 @@ public class XPathFinder implements Finder {
 
     private static void setAttribute(Element element, Attribute attr, boolean value) {
         element.setAttribute(attr.getName(), String.valueOf(value));
-    }
-
-    public static UiAutomationElement refreshUiElementTree() {
-        return UiAutomationElement.newRootElement(getRootAccessibilityNode(),
-                NotificationListener.getInstance().getToastMessage());
-    }
-
-    public static UiAutomationElement refreshUiElementTree(AccessibilityNodeInfo nodeInfo) {
-        return UiAutomationElement.newRootElement(nodeInfo, null /*Toast Messages*/);
-    }
-
-    public static AccessibilityNodeInfo getRootAccessibilityNode() throws UiAutomator2Exception {
-        final long timeoutMillis = 10000;
-        Device.waitForIdle();
-
-        long end = SystemClock.uptimeMillis() + timeoutMillis;
-        while (end > SystemClock.uptimeMillis()) {
-            AccessibilityNodeInfo root = null;
-            try {
-                root = UiAutomatorBridge.getInstance().getQueryController().getAccessibilityRootNode();
-            } catch (IllegalStateException ignore) {
-                /*
-                 * Sometimes getAccessibilityRootNode() throws
-                 * "java.lang.IllegalStateException: Cannot perform this action on a sealed instance."
-                 * Ignore it and try to re-get root node.
-                 */
-                Logger.debug("IllegalStateException was catched while invoking getAccessibilityRootNode() - ignore it");
-            }
-            if (root != null) {
-                return root;
-            }
-            SystemClock.sleep(250);
-        }
-        final String message = "Timed out after %d milliseconds waiting for root AccessibilityNodeInfo";
-        throw new UiAutomator2Exception(String.format(message, timeoutMillis));
     }
 
     /**

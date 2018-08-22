@@ -17,6 +17,7 @@
 package io.appium.uiautomator2.model;
 
 import android.graphics.Rect;
+import android.support.annotation.Nullable;
 import android.support.test.uiautomator.BySelector;
 import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObject2;
@@ -162,8 +163,9 @@ public class UiObject2Element implements AndroidElement {
         return element.getVisibleBounds();
     }
 
-    public Object getChild(final Object selector) throws UiObjectNotFoundException,
-            InvalidSelectorException, ClassNotFoundException {
+    @Nullable
+    public Object getChild(final Object selector)
+            throws UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
         if (selector instanceof UiSelector) {
             /*
              * We can't find the child element with UiSelector on UiObject2,
@@ -175,15 +177,18 @@ public class UiObject2Element implements AndroidElement {
             UiSelector uiSelector = new UiSelector();
             CustomUiSelector customUiSelector = new CustomUiSelector(uiSelector);
             uiSelector = customUiSelector.getUiSelector(nodeInfo);
-            UiObject uiObject = (UiObject) CustomUiDevice.getInstance().findObject(uiSelector);
-            AccessibilityNodeInfo uiObject_nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
-            return uiObject.getChild((UiSelector) selector);
+            Object uiObject = CustomUiDevice.getInstance().findObject(uiSelector);
+            if (uiObject instanceof UiObject) {
+                AccessibilityNodeInfoGetter.fromUiObject(element);
+                return ((UiObject) uiObject).getChild((UiSelector) selector);
+            }
+            return null;
         }
         return element.findObject((BySelector) selector);
     }
 
-    public List<Object> getChildren(final Object selector, final By by) throws
-            UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
+    public List<Object> getChildren(final Object selector, final By by)
+            throws UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
         if (selector instanceof UiSelector) {
             /*
              * We can't find the child elements with UiSelector on UiObject2,
