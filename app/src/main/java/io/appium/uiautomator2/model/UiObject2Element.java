@@ -23,6 +23,7 @@ import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
+import android.util.Range;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Toast;
 
@@ -33,9 +34,9 @@ import java.util.UUID;
 import io.appium.uiautomator2.common.exceptions.InvalidCoordinatesException;
 import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.NoAttributeFoundException;
-import io.appium.uiautomator2.common.exceptions.UiAutomator2Exception;
 import io.appium.uiautomator2.core.AccessibilityNodeInfoGetter;
 import io.appium.uiautomator2.model.internal.CustomUiDevice;
+import io.appium.uiautomator2.utils.Attribute;
 import io.appium.uiautomator2.utils.ElementHelpers;
 import io.appium.uiautomator2.utils.Logger;
 import io.appium.uiautomator2.utils.Point;
@@ -62,15 +63,18 @@ public class UiObject2Element implements AndroidElement {
         return Objects.equals(nodeInfo.getClassName(), Toast.class.getName());
     }
 
+    @Override
     public void click() {
         element.click();
     }
 
+    @Override
     public boolean longClick() {
         element.longClick();
         return true;
     }
 
+    @Override
     public String getText() {
         AccessibilityNodeInfo nodeInfo = (AccessibilityNodeInfo) getField(UiObject2.class,
                 "mCachedNode", element);
@@ -98,77 +102,128 @@ public class UiObject2Element implements AndroidElement {
         return element.getText() != null ? element.getText() : "";
     }
 
+    @Override
     public String getName() {
         return element.getContentDescription();
     }
 
-    public String getStringAttribute(final String attr) throws NoAttributeFoundException {
-        if ("name".equalsIgnoreCase(attr) || "text".equalsIgnoreCase(attr)) {
-            return getText();
+    @Nullable
+    @Override
+    public String getAttribute(String attr) throws NoAttributeFoundException, UiObjectNotFoundException {
+        final Attribute dstAttribute = Attribute.fromString(attr);
+        if (dstAttribute == null) {
+            throw generateNoAttributeException(attr);
         }
-        if ("contentDescription".equalsIgnoreCase(attr)) {
-            return element.getContentDescription();
-        }
-        if ("className".equalsIgnoreCase(attr)) {
-            return element.getClassName();
-        }
-        if ("resourceId".equalsIgnoreCase(attr) || "resource-id".equalsIgnoreCase(attr)) {
-            return element.getResourceName();
-        }
-        throw generateNoAttributeException(attr);
-    }
 
-    public boolean getBoolAttribute(final String attr) throws UiAutomator2Exception {
-        switch (attr) {
-            case "enabled":
-                return element.isEnabled();
-            case "checkable":
-                return element.isCheckable();
-            case "checked":
-                return element.isChecked();
-            case "clickable":
-                return element.isClickable();
-            case "focusable":
-                return element.isFocusable();
-            case "focused":
-                return element.isFocused();
-            case "longClickable":
-                return element.isLongClickable();
-            case "scrollable":
-                return element.isScrollable();
-            case "selected":
-                return element.isSelected();
-            case "displayed":
-                return AccessibilityNodeInfoGetter.fromUiObject(element) != null;
-            case "password":
+        final Object result;
+        switch (dstAttribute) {
+            case TEXT:
+                result = getText();
+                break;
+            case CONTENT_DESC:
+                result = element.getContentDescription();
+                break;
+            case CLASS:
+                result = element.getClassName();
+                break;
+            case RESOURCE_ID:
+                result = element.getResourceName();
+                break;
+            case CONTENT_SIZE:
+                result = ElementHelpers.getContentSize(this);
+                break;
+            case ENABLED:
+                result = element.isEnabled();
+                break;
+            case CHECKABLE:
+                result = element.isCheckable();
+                break;
+            case CHECKED:
+                result = element.isChecked();
+                break;
+            case CLICKABLE:
+                result = element.isClickable();
+                break;
+            case FOCUSABLE:
+                result = element.isFocusable();
+                break;
+            case FOCUSED:
+                result = element.isFocused();
+                break;
+            case LONG_CLICKABLE:
+                result = element.isLongClickable();
+                break;
+            case SCROLLABLE:
+                result = element.isScrollable();
+                break;
+            case SELECTED:
+                result = element.isSelected();
+                break;
+            case DISPLAYED:
+                result = AccessibilityNodeInfoGetter.fromUiObject(element) != null;
+                break;
+            case PASSWORD: {
                 AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
-                return nodeInfo != null && nodeInfo.isPassword();
+                result = nodeInfo == null ? null : nodeInfo.isPassword();
+                break;
+            }
+            case BOUNDS:
+                result = element.getVisibleBounds().toShortString();
+                break;
+            case PACKAGE: {
+                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
+                result = nodeInfo == null ? null : nodeInfo.getPackageName();
+                break;
+            }
+            case SELECTION_END:
+            case SELECTION_START: {
+                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
+                Range<Integer> selectionRange = ElementHelpers.getSelectionRange(nodeInfo);
+                if (selectionRange == null) {
+                    result = null;
+                } else {
+                    result = dstAttribute == Attribute.SELECTION_END
+                            ? selectionRange.getUpper()
+                            : selectionRange.getLower();
+                }
+                break;
+            }
             default:
                 throw generateNoAttributeException(attr);
         }
+        if (result == null) {
+            return null;
+        }
+        return (result instanceof String) ? (String) result : String.valueOf(result);
     }
 
+    @Override
     public boolean setText(final String text) {
         return ElementHelpers.setText(element, text);
     }
 
+    @Override
     public By getBy() {
         return by;
     }
 
+    @Override
     public void clear() {
         element.clear();
     }
 
+    @Override
     public String getId() {
         return this.id;
     }
 
+    @Override
     public Rect getBounds() {
         return element.getVisibleBounds();
     }
 
     @Nullable
+    @Override
     public Object getChild(final Object selector)
             throws UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
         if (selector instanceof UiSelector) {
@@ -192,6 +247,7 @@ public class UiObject2Element implements AndroidElement {
         return element.findObject((BySelector) selector);
     }
 
+    @Override
     public List<Object> getChildren(final Object selector, final By by)
             throws UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
         if (selector instanceof UiSelector) {
@@ -214,14 +270,17 @@ public class UiObject2Element implements AndroidElement {
         return (List) element.findObjects((BySelector) selector);
     }
 
+    @Override
     public String getContentDesc() {
         return element.getContentDescription();
     }
 
+    @Override
     public UiObject2 getUiObject() {
         return element;
     }
 
+    @Override
     public Point getAbsolutePosition(final Point point)
             throws InvalidCoordinatesException {
         final Rect rect = this.getBounds();

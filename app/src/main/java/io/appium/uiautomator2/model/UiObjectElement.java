@@ -24,6 +24,7 @@ import android.support.test.uiautomator.UiObject;
 import android.support.test.uiautomator.UiObject2;
 import android.support.test.uiautomator.UiObjectNotFoundException;
 import android.support.test.uiautomator.UiSelector;
+import android.util.Range;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.NoAttributeFoundException;
 import io.appium.uiautomator2.core.AccessibilityNodeInfoGetter;
 import io.appium.uiautomator2.model.internal.CustomUiDevice;
+import io.appium.uiautomator2.utils.Attribute;
 import io.appium.uiautomator2.utils.Device;
 import io.appium.uiautomator2.utils.ElementHelpers;
 import io.appium.uiautomator2.utils.Logger;
@@ -58,90 +60,144 @@ public class UiObjectElement implements AndroidElement {
         this.by = by;
     }
 
+    @Override
     public void click() throws UiObjectNotFoundException {
         element.click();
     }
 
+    @Override
     public boolean longClick() throws UiObjectNotFoundException {
         return element.longClick();
     }
 
+    @Override
     public String getText() throws UiObjectNotFoundException {
         // on null returning empty string
         return element.getText() != null ? element.getText() : "";
     }
 
+    @Override
     public String getName() throws UiObjectNotFoundException {
         return element.getContentDescription();
     }
 
-    public String getStringAttribute(final String attr) throws UiObjectNotFoundException, NoAttributeFoundException {
-        if ("name".equalsIgnoreCase(attr) || "text".equalsIgnoreCase(attr)) {
-            return getText();
+    @Nullable
+    @Override
+    public String getAttribute(String attr) throws UiObjectNotFoundException, NoAttributeFoundException {
+        final Attribute dstAttribute = Attribute.fromString(attr);
+        if (dstAttribute == null) {
+            throw generateNoAttributeException(attr);
         }
-        if ("contentDescription".equalsIgnoreCase(attr)) {
-            return element.getContentDescription();
-        }
-        if ("className".equalsIgnoreCase(attr)) {
-            return element.getClassName();
-        }
-        if ("resourceId".equalsIgnoreCase(attr) || "resource-id".equalsIgnoreCase(attr)) {
-            return getResourceId();
-        }
-        throw generateNoAttributeException(attr);
-    }
 
-    public boolean getBoolAttribute(final String attr) throws UiObjectNotFoundException, NoAttributeFoundException {
-        switch (attr) {
-            case "enabled":
-                return element.isEnabled();
-            case "checkable":
-                return element.isCheckable();
-            case "checked":
-                return element.isChecked();
-            case "clickable":
-                return element.isClickable();
-            case "focusable":
-                return element.isFocusable();
-            case "focused":
-                return element.isFocused();
-            case "longClickable":
-                return element.isLongClickable();
-            case "scrollable":
-                return element.isScrollable();
-            case "selected":
-                return element.isSelected();
-            case "displayed":
-                return element.exists();
-            case "password":
+        final Object result;
+        switch (dstAttribute) {
+            case TEXT:
+                result = getText();
+                break;
+            case CONTENT_DESC:
+                result = element.getContentDescription();
+                break;
+            case CLASS:
+                result = element.getClassName();
+                break;
+            case RESOURCE_ID:
+                result = getResourceId();
+                break;
+            case CONTENT_SIZE:
+                result = ElementHelpers.getContentSize(this);
+                break;
+            case ENABLED:
+                result = element.isEnabled();
+                break;
+            case CHECKABLE:
+                result = element.isCheckable();
+                break;
+            case CHECKED:
+                result = element.isChecked();
+                break;
+            case CLICKABLE:
+                result = element.isClickable();
+                break;
+            case FOCUSABLE:
+                result = element.isFocusable();
+                break;
+            case FOCUSED:
+                result = element.isFocused();
+                break;
+            case LONG_CLICKABLE:
+                result = element.isLongClickable();
+                break;
+            case SCROLLABLE:
+                result = element.isScrollable();
+                break;
+            case SELECTED:
+                result = element.isSelected();
+                break;
+            case DISPLAYED:
+                result = element.exists();
+                break;
+            case PASSWORD: {
                 AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
-                return nodeInfo != null && nodeInfo.isPassword();
+                result = nodeInfo == null ? null : nodeInfo.isPassword();
+                break;
+            }
+            case BOUNDS:
+                result = element.getVisibleBounds().toShortString();
+                break;
+            case PACKAGE: {
+                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
+                result = nodeInfo == null ? null : nodeInfo.getPackageName();
+                break;
+            }
+            case SELECTION_END:
+            case SELECTION_START: {
+                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
+                Range<Integer> selectionRange = ElementHelpers.getSelectionRange(nodeInfo);
+                if (selectionRange == null) {
+                    result = null;
+                } else {
+                    result = dstAttribute == Attribute.SELECTION_END
+                            ? selectionRange.getUpper()
+                            : selectionRange.getLower();
+                }
+                break;
+            }
             default:
                 throw generateNoAttributeException(attr);
         }
+        if (result == null) {
+            return null;
+        }
+        return (result instanceof String) ? (String) result : String.valueOf(result);
     }
 
+    @Override
     public boolean setText(final String text) {
         return ElementHelpers.setText(element, text);
     }
 
+    @Override
     public By getBy() {
         return by;
     }
 
+    @Override
     public void clear() throws UiObjectNotFoundException {
         element.setText("");
     }
 
+    @Override
     public String getId() {
         return this.id;
     }
 
+    @Override
     public Rect getBounds() throws UiObjectNotFoundException {
         return element.getVisibleBounds();
     }
 
     @Nullable
+    @Override
     public Object getChild(final Object selector)
             throws UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
         if (selector instanceof BySelector) {
@@ -159,6 +215,7 @@ public class UiObjectElement implements AndroidElement {
     }
 
     @SuppressWarnings({"ConstantConditions", "unchecked"})
+    @Override
     public List<Object> getChildren(final Object selector, final By by)
             throws UiObjectNotFoundException, InvalidSelectorException, ClassNotFoundException {
         if (selector instanceof BySelector) {
@@ -231,14 +288,17 @@ public class UiObjectElement implements AndroidElement {
         return elements;
     }
 
+    @Override
     public String getContentDesc() throws UiObjectNotFoundException {
         return element.getContentDescription();
     }
 
+    @Override
     public UiObject getUiObject() {
         return element;
     }
 
+    @Override
     public Point getAbsolutePosition(final Point point) throws UiObjectNotFoundException, InvalidCoordinatesException {
         final Rect rect = this.getBounds();
         Logger.debug("Element bounds: " + rect.toShortString());
@@ -273,6 +333,7 @@ public class UiObjectElement implements AndroidElement {
         return resourceId;
     }
 
+    @Override
     public boolean dragTo(final int destX, final int destY, final int steps)
             throws UiObjectNotFoundException, InvalidCoordinatesException {
         Point coords = new Point(destX, destY);
@@ -280,6 +341,7 @@ public class UiObjectElement implements AndroidElement {
         return element.dragTo(coords.x.intValue(), coords.y.intValue(), steps);
     }
 
+    @Override
     public boolean dragTo(final Object destObj, final int steps)
             throws UiObjectNotFoundException, InvalidCoordinatesException {
         if (destObj instanceof UiObject) {
