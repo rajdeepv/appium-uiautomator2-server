@@ -35,6 +35,7 @@ import io.appium.uiautomator2.common.exceptions.InvalidCoordinatesException;
 import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.NoAttributeFoundException;
 import io.appium.uiautomator2.core.AccessibilityNodeInfoGetter;
+import io.appium.uiautomator2.core.AccessibilityNodeInfoHelpers;
 import io.appium.uiautomator2.model.internal.CustomUiDevice;
 import io.appium.uiautomator2.utils.Attribute;
 import io.appium.uiautomator2.utils.Device;
@@ -72,6 +73,7 @@ public class UiObjectElement implements AndroidElement {
 
     @Override
     public String getText() throws UiObjectNotFoundException {
+        // By convention the text is replaced with an empty string if it equals to null
         return ElementHelpers.getText(element);
     }
 
@@ -133,34 +135,24 @@ public class UiObjectElement implements AndroidElement {
                 result = element.isSelected();
                 break;
             case DISPLAYED:
-                result = element.exists();
+                result = element.exists() && AccessibilityNodeInfoHelpers.isVisible(AccessibilityNodeInfoGetter.fromUiObject(element));
                 break;
-            case PASSWORD: {
-                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
-                result = nodeInfo == null ? null : nodeInfo.isPassword();
+            case PASSWORD:
+                result = AccessibilityNodeInfoHelpers.isPassword(AccessibilityNodeInfoGetter.fromUiObject(element));
                 break;
-            }
             case BOUNDS:
                 result = element.getVisibleBounds().toShortString();
                 break;
             case PACKAGE: {
-                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
-                result = nodeInfo == null ? null : nodeInfo.getPackageName();
+                result = AccessibilityNodeInfoHelpers.getPackageName(AccessibilityNodeInfoGetter.fromUiObject(element));
                 break;
             }
             case SELECTION_END:
-            case SELECTION_START: {
-                AccessibilityNodeInfo nodeInfo = AccessibilityNodeInfoGetter.fromUiObject(element);
-                Range<Integer> selectionRange = ElementHelpers.getSelectionRange(nodeInfo);
-                if (selectionRange == null) {
-                    result = null;
-                } else {
-                    result = dstAttribute == Attribute.SELECTION_END
-                            ? selectionRange.getUpper()
-                            : selectionRange.getLower();
-                }
+            case SELECTION_START:
+                Range<Integer> selectionRange = AccessibilityNodeInfoHelpers.getSelectionRange(AccessibilityNodeInfoGetter.fromUiObject(element));
+                result = selectionRange == null ? null
+                        : (dstAttribute == Attribute.SELECTION_END ? selectionRange.getUpper() : selectionRange.getLower());
                 break;
-            }
             default:
                 throw generateNoAttributeException(attr);
         }
