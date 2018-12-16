@@ -16,22 +16,26 @@
 package io.appium.uiautomator2.core;
 
 import android.app.UiAutomation.OnAccessibilityEventListener;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import static io.appium.uiautomator2.utils.ReflectionUtils.getField;
 
 public class UiAutomation {
     private static final String FIELD_ON_ACCESSIBILITY_EVENT_LISTENER =
             "mOnAccessibilityEventListener";
-    private static final UiAutomation INSTANCE = new UiAutomation();
+    private static UiAutomation INSTANCE = null;
 
     private final android.app.UiAutomation uiAutomation;
 
     private UiAutomation() {
-        uiAutomation = UiAutomatorBridge.getInstance().getUiAutomation();
+        this.uiAutomation = UiAutomatorBridge.getInstance().getUiAutomation();
     }
 
-    public static UiAutomation getInstance() {
+    public static synchronized UiAutomation getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new UiAutomation();
+        }
         return INSTANCE;
     }
 

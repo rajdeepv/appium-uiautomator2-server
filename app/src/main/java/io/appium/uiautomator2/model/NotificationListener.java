@@ -16,12 +16,12 @@
 
 package io.appium.uiautomator2.model;
 
-import android.support.annotation.NonNull;
 import android.view.accessibility.AccessibilityEvent;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import androidx.annotation.NonNull;
 import io.appium.uiautomator2.core.UiAutomation;
 import io.appium.uiautomator2.utils.Logger;
 
@@ -29,7 +29,7 @@ import static android.app.UiAutomation.OnAccessibilityEventListener;
 import static java.lang.System.currentTimeMillis;
 
 public final class NotificationListener implements OnAccessibilityEventListener {
-    private static final NotificationListener INSTANCE = new NotificationListener();
+    private static NotificationListener INSTANCE;
     private static final int TOAST_CLEAR_TIMEOUT = 3500;
 
     private final UiAutomation uiAutomation;
@@ -43,6 +43,9 @@ public final class NotificationListener implements OnAccessibilityEventListener 
     }
 
     public static NotificationListener getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new NotificationListener();
+        }
         return INSTANCE;
     }
 
