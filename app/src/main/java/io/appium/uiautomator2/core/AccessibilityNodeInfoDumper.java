@@ -38,8 +38,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import androidx.annotation.Nullable;
@@ -217,29 +215,23 @@ public class AccessibilityNodeInfoDumper {
             final XPathExpression<org.jdom2.Attribute> expr = XPATH
                     .compile(String.format("(%s)/@%s", xpathSelector, UI_ELEMENT_INDEX), Filters.attribute());
             final NodeInfoList matchedNodes = new NodeInfoList();
-            final List<org.jdom2.Attribute> idMatches;
-            if (multiple) {
-                idMatches = expr.evaluate(document);
-            } else {
-                org.jdom2.Attribute idMatch = expr.evaluateFirst(document);
-                idMatches = idMatch == null
-                        ? Collections.<org.jdom2.Attribute>emptyList()
-                        : Collections.singletonList(idMatch);
-            }
-            for (org.jdom2.Attribute uiElementId : idMatches) {
+            for (org.jdom2.Attribute uiElementId : expr.evaluate(document)) {
                 final UiElement uiElement = uiElementsMapping.get(uiElementId.getIntValue());
                 if (uiElement == null || uiElement.getNode() == null) {
                     continue;
                 }
 
                 matchedNodes.add(uiElement.getNode());
+                if (!multiple) {
+                    break;
+                }
             }
             Logger.debug(String.format("Took %sms to retrieve %s matches for '%s' XPath query",
                     SystemClock.uptimeMillis() - timeStarted, matchedNodes.size(), xpathSelector));
             return matchedNodes;
         } catch (JDOMParseException e) {
             throw new UiAutomator2Exception(String.format("%s. " +
-                    "Try changing the '%s' driver setting to 'true' in order to workaround the problem.",
+                            "Try changing the '%s' driver setting to 'true' in order to workaround the problem.",
                     e.getMessage(), Settings.NORMALIZE_TAG_NAMES.toString()), e);
         } catch (Exception e) {
             throw new UiAutomator2Exception(e);
