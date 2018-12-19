@@ -16,27 +16,30 @@
 
 package io.appium.uiautomator2.core;
 
-import android.content.Context;
 import android.graphics.Point;
 import android.os.SystemClock;
 import android.util.SparseArray;
 import android.util.Xml;
 import android.view.Display;
+import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
 
-import org.apache.commons.jxpath.JXPathContext;
-import org.apache.commons.jxpath.JXPathException;
-import org.apache.commons.jxpath.xml.DocumentContainer;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jdom2.Document;
+import org.jdom2.filter.Filters;
+import org.jdom2.input.JDOMParseException;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.xpath.XPathExpression;
+import org.jdom2.xpath.XPathFactory;
 import org.xmlpull.v1.XmlSerializer;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Iterator;
-import java.util.UUID;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import androidx.annotation.Nullable;
@@ -44,15 +47,17 @@ import io.appium.uiautomator2.common.exceptions.InvalidSelectorException;
 import io.appium.uiautomator2.common.exceptions.UiAutomator2Exception;
 import io.appium.uiautomator2.model.NotificationListener;
 import io.appium.uiautomator2.model.UiElement;
+import io.appium.uiautomator2.model.settings.NormalizeTagNames;
+import io.appium.uiautomator2.model.settings.Settings;
 import io.appium.uiautomator2.utils.Attribute;
 import io.appium.uiautomator2.utils.Logger;
 import io.appium.uiautomator2.utils.NodeInfoList;
 
-import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 import static io.appium.uiautomator2.model.UiAutomationElement.rebuildForNewRoot;
 import static io.appium.uiautomator2.utils.AXWindowHelpers.currentActiveWindowRoot;
 import static io.appium.uiautomator2.utils.XMLHelpers.toNodeName;
 import static io.appium.uiautomator2.utils.XMLHelpers.toSafeString;
+import static net.gcardone.junidecode.Junidecode.unidecode;
 
 public class AccessibilityNodeInfoDumper {
     // https://github.com/appium/appium/issues/10204
@@ -60,10 +65,11 @@ public class AccessibilityNodeInfoDumper {
     private static final String UI_ELEMENT_INDEX = "uiElementIndex";
     private static final String NON_XML_CHAR_REPLACEMENT = "?";
     private static final String NAMESPACE = "";
-    private final static String DEFAULT_VIEW_CLASS_NAME = "android.view.View";
+    private static final String DEFAULT_VIEW_CLASS_NAME = View.class.getName();
     private static final String XML_ENCODING = "UTF-8";
+    private static final XPathFactory XPATH = XPathFactory.instance();
+    private static final SAXBuilder SAX_BUILDER = new SAXBuilder();
     private final Semaphore RESOURCES_GUARD = new Semaphore(1);
-    private String tmpXmlName;
 
     @Nullable
     private final AccessibilityNodeInfo root;
@@ -98,6 +104,13 @@ public class AccessibilityNodeInfoDumper {
                 .replaceAll("[$@#&]", ".")
                 .replaceAll("\\.+", ".")
                 .replaceAll("(^\\.|\\.$)", "");
+
+        if (((NormalizeTagNames) Settings.NORMALIZE_TAG_NAMES.getSetting()).getValue()) {
+            // A workaround for the Apache Harmony bug described in https://github.com/appium/appium/issues/11854
+            // The buggy implementation: https://android.googlesource.com/platform/dalvik/+/21d27c095fee51fd6eac6a68d50b79df4dc97d85/libcore/xml/src/main/java/org/apache/harmony/xml/dom/DocumentImpl.java#84
+            fixedName = unidecode(fixedName).replaceAll("[^A-Za-z0-9\\-._]", "_");
+        }
+
         fixedName = toNodeName(fixedName);
         if (StringUtils.isBlank(fixedName)) {
             fixedName = DEFAULT_VIEW_CLASS_NAME;
@@ -146,10 +159,9 @@ public class AccessibilityNodeInfoDumper {
         serializer.endTag(NAMESPACE, nodeName);
     }
 
-    private File toFile() throws IOException {
-        tmpXmlName = String.format("%s.xml", UUID.randomUUID().toString());
+    private InputStream toStream() throws IOException {
         final long startTime = SystemClock.uptimeMillis();
-        try (OutputStream outputStream = getApplicationContext().openFileOutput(tmpXmlName, Context.MODE_PRIVATE)) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             serializer = Xml.newSerializer();
             shouldAddDisplayInfo = root == null;
             serializer.setOutput(outputStream, XML_ENCODING);
@@ -160,19 +172,14 @@ public class AccessibilityNodeInfoDumper {
                     : rebuildForNewRoot(root, null);
             serializeUiElement(xpathRoot, 0);
             serializer.endDocument();
+            Logger.debug(String.format("The source XML tree (%s bytes) has been fetched in %sms",
+                    outputStream.size(), SystemClock.uptimeMillis() - startTime));
+            return new ByteArrayInputStream(outputStream.toByteArray());
         }
-        File resultXml = getApplicationContext().getFileStreamPath(tmpXmlName);
-        Logger.info(String.format("The source XML tree (%s bytes) has been fetched in %sms", resultXml.length(),
-                SystemClock.uptimeMillis() - startTime));
-        return resultXml;
     }
 
     private void performCleanup() {
         uiElementsMapping = null;
-        if (tmpXmlName != null) {
-            getApplicationContext().deleteFile(tmpXmlName);
-            tmpXmlName = null;
-        }
     }
 
     public String dumpToXml() {
@@ -181,15 +188,8 @@ public class AccessibilityNodeInfoDumper {
         } catch (InterruptedException e) {
             throw new UiAutomator2Exception(e);
         }
-        try {
-            StringBuilder sb = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new FileReader(toFile()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line).append("\n");
-                }
-            }
-            return sb.toString();
+        try (InputStream xmlStream = toStream()) {
+            return IOUtils.toString(xmlStream, XML_ENCODING);
         } catch (IOException e) {
             throw new UiAutomator2Exception(e);
         } finally {
@@ -199,9 +199,10 @@ public class AccessibilityNodeInfoDumper {
     }
 
     public NodeInfoList findNodes(String xpathSelector, boolean multiple) {
+        final long timeStarted = SystemClock.uptimeMillis();
         try {
-             JXPathContext.compile(xpathSelector);
-        } catch (JXPathException e) {
+            XPATH.compile(xpathSelector, Filters.element());
+        } catch (IllegalArgumentException e) {
             throw new InvalidSelectorException(e);
         }
 
@@ -210,25 +211,37 @@ public class AccessibilityNodeInfoDumper {
         } catch (InterruptedException e) {
             throw new UiAutomator2Exception(e);
         }
-        try {
-            uiElementsMapping = new SparseArray<>();
-            final DocumentContainer documentContainer = new DocumentContainer(toFile().toURI().toURL());
-            final JXPathContext ctx = JXPathContext.newContext(documentContainer);
-            final Iterator matchedElementIndexes = ctx.iterate(String.format("(%s)/@%s", xpathSelector, UI_ELEMENT_INDEX));
-            final NodeInfoList matchesList = new NodeInfoList();
-            while (matchedElementIndexes.hasNext()) {
-                final UiElement uiElement = uiElementsMapping.get(Integer.parseInt((String) matchedElementIndexes.next()));
+        uiElementsMapping = new SparseArray<>();
+        try (InputStream xmlStream = toStream()) {
+            final Document document = SAX_BUILDER.build(xmlStream);
+            final XPathExpression<org.jdom2.Attribute> expr = XPATH
+                    .compile(String.format("(%s)/@%s", xpathSelector, UI_ELEMENT_INDEX), Filters.attribute());
+            final NodeInfoList matchedNodes = new NodeInfoList();
+            final List<org.jdom2.Attribute> idMatches;
+            if (multiple) {
+                idMatches = expr.evaluate(document);
+            } else {
+                org.jdom2.Attribute idMatch = expr.evaluateFirst(document);
+                idMatches = idMatch == null
+                        ? Collections.<org.jdom2.Attribute>emptyList()
+                        : Collections.singletonList(idMatch);
+            }
+            for (org.jdom2.Attribute uiElementId : idMatches) {
+                final UiElement uiElement = uiElementsMapping.get(uiElementId.getIntValue());
                 if (uiElement == null || uiElement.getNode() == null) {
                     continue;
                 }
 
-                matchesList.addToList(uiElement.getNode());
-                if (!multiple) {
-                    break;
-                }
+                matchedNodes.add(uiElement.getNode());
             }
-            return matchesList;
-        } catch (IOException e) {
+            Logger.debug(String.format("Took %sms to retrieve %s matches for '%s' XPath query",
+                    SystemClock.uptimeMillis() - timeStarted, matchedNodes.size(), xpathSelector));
+            return matchedNodes;
+        } catch (JDOMParseException e) {
+            throw new UiAutomator2Exception(String.format("%s. " +
+                    "Try changing the '%s' driver setting to 'true' in order to workaround the problem.",
+                    e.getMessage(), Settings.NORMALIZE_TAG_NAMES.toString()), e);
+        } catch (Exception e) {
             throw new UiAutomator2Exception(e);
         } finally {
             performCleanup();

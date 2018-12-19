@@ -25,7 +25,7 @@ public class NodeInfoList {
 
     private final List<AccessibilityNodeInfo> nodeList = new ArrayList<>();
 
-    public void addToList(AccessibilityNodeInfo node) {
+    public void add(AccessibilityNodeInfo node) {
         nodeList.add(node);
     }
 
@@ -35,5 +35,9 @@ public class NodeInfoList {
 
     public boolean isEmpty() {
         return nodeList.isEmpty();
+    }
+
+    public int size() {
+        return nodeList.size();
     }
 }
