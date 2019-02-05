@@ -36,11 +36,32 @@ public abstract class Device {
         getUiDevice().wakeUp();
     }
 
-    public static void scrollTo(String scrollToString) throws UiObjectNotFoundException {
-        // TODO This logic needs to be changed according to the request body from the Driver
+    public static void scrollToElement(UiSelector selector, int maxSwipes)
+            throws UiObjectNotFoundException {
         UiScrollable uiScrollable = new UiScrollable(new UiSelector().scrollable(true).instance(0));
-        uiScrollable.scrollIntoView(new UiSelector().descriptionContains(scrollToString).instance(0));
-        uiScrollable.scrollIntoView(new UiSelector().textContains(scrollToString).instance(0));
+        String uiScrollableClassName = uiScrollable.getClassName();
+        String hScrollViewClassName = android.widget.HorizontalScrollView.class.getName();
+        int defaultMaxSwipes = uiScrollable.getMaxSearchSwipes();
+
+        if (java.util.Objects.equals(uiScrollableClassName, hScrollViewClassName)) {
+            uiScrollable.setAsHorizontalList();
+        }
+
+        if (maxSwipes > 0) {
+            uiScrollable.setMaxSearchSwipes(maxSwipes);
+        }
+
+        try {
+            if (!uiScrollable.scrollIntoView(selector)) {
+                throw new UiObjectNotFoundException("Cannot scroll to the element.");
+            }
+        }
+        finally {
+            // The number of search swipes is held in a static property of the UiScrollable class.
+            // Whenever a non-default number of search swipes is used during the scroll, we must
+            // always restore the setting after the operation.
+            uiScrollable.setMaxSearchSwipes(defaultMaxSwipes);
+        }
     }
 
     public static boolean back() {
@@ -69,6 +90,4 @@ public abstract class Device {
             Logger.error(String.format("Unable wait %s for AUT to idle", timeInMS));
         }
     }
-
-
 }

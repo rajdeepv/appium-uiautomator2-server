@@ -34,36 +34,47 @@ public abstract class By {
      * @return a By which locates elements by the value of the "id" attribute.
      */
     public static By id(final String id) {
-        if (id == null)
+        if (id == null) {
             throw new IllegalArgumentException("Cannot find elements with a null id attribute.");
-
+        }
         return new ById(id);
     }
 
     public static By accessibilityId(final String text) {
-        if (text == null)
+        if (text == null) {
             throw new IllegalArgumentException("Cannot find elements when text is null.");
-
+        }
         return new ByAccessibilityId(text);
     }
 
     public static By xpath(String xpathExpression) {
-        if (xpathExpression == null)
+        if (xpathExpression == null) {
             throw new IllegalArgumentException("Cannot find elements when xpath is null.");
+        }
         return new ByXPath(xpathExpression);
     }
 
     public static By className(String className) {
-        if (className == null)
+        if (className == null) {
             throw new IllegalArgumentException("Cannot find elements when className is null.");
+        }
         return new ByClass(className);
     }
 
     public static By androidUiAutomator(String expression) {
-        if (expression == null)
-            throw new IllegalArgumentException("Cannot find elements when '-android uiautomator'" +
-                    " is null.");
+        if (expression == null) {
+            throw new IllegalArgumentException(
+                    "Cannot find elements when '-android uiautomator' is null.");
+        }
         return new ByAndroidUiAutomator(expression);
+    }
+
+    public static By text(final String text) {
+        if (text == null) {
+            throw new IllegalArgumentException("Cannot find elements when text is null.");
+        }
+
+        return new ByText(text);
     }
 
     @Override
@@ -184,15 +195,15 @@ public abstract class By {
     }
 
     public static class ByAndroidUiAutomator extends By {
-        private final String expresion;
+        private final String expression;
 
-        public ByAndroidUiAutomator(String expresion) {
-            this.expresion = expresion;
+        public ByAndroidUiAutomator(String expression) {
+            this.expression = expression;
         }
 
         @Override
         public String getElementLocator() {
-            return expresion;
+            return expression;
         }
 
         @Override
@@ -202,7 +213,32 @@ public abstract class By {
 
         @Override
         public String toString() {
-            return "By.AndroidUiAutomator: " + expresion;
+            return "By.AndroidUiAutomator: " + expression;
+        }
+    }
+
+    public static class ByText extends By {
+        private final String text;
+
+        public ByText(String text) {
+            this.text = text;
+        }
+
+        @Override
+        public String getElementLocator() {
+            String textEscaped = text
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"");
+
+            return "new UiSelector().text(\"" + textEscaped + "\")";
+        }
+
+        @Override
+        public String getElementStrategy() { return SELECTOR_ANDROID_UIAUTOMATOR; }
+
+        @Override
+        public String toString() {
+            return "By.text: " + text;
         }
     }
 }
