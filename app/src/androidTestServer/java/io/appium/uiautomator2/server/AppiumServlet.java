@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import io.appium.uiautomator2.handler.AcceptAlert;
+import io.appium.uiautomator2.handler.Backdoor;
 import io.appium.uiautomator2.handler.CaptureScreenshot;
 import io.appium.uiautomator2.handler.Clear;
 import io.appium.uiautomator2.handler.Click;
@@ -136,6 +137,7 @@ public class AppiumServlet implements IHttpServlet {
         register(postHandler, new TouchMove("/wd/hub/session/:sessionId/touch/move"));
         register(postHandler, new UpdateSettings("/wd/hub/session/:sessionId/appium/settings"));
         register(postHandler, new NetworkConnection("/wd/hub/session/:sessionId/network_connection"));
+        register(postHandler, new Backdoor("/wd/hub/session/:sessionId/backdoor"));
         register(postHandler, new ScrollToElement("/wd/hub/session/:sessionId/appium/element/:id/scroll_to/:elementId"));
         register(postHandler, new GetClipboard("/wd/hub/session/:sessionId/appium/device/get_clipboard"));
         register(postHandler, new SetClipboard("/wd/hub/session/:sessionId/appium/device/set_clipboard"));

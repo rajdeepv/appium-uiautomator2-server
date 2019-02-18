@@ -71,17 +71,17 @@ unMock {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.test.uiautomator:uiautomator:2.2.0'
-    implementation 'androidx.test:core:1.1.0'
-    implementation 'androidx.test:runner:1.1.1'
-    implementation 'com.jayway.jsonpath:json-path:0.8.1'
-    implementation 'com.squareup.okhttp:okhttp:2.5.0'
-    implementation 'commons-io:commons-io:2.6'
-    implementation 'io.netty:netty-all:4.0.41.Final'
-    implementation 'jaxen:jaxen:1.1.6'
-    implementation 'net.gcardone.junidecode:junidecode:0.4.1'
-    implementation 'org.jdom:jdom2:2.0.6'
+    androidTestImplementation fileTree(include: ['*.jar'], dir: 'libs')
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
+    androidTestImplementation 'androidx.test:core:1.1.0'
+    androidTestImplementation 'androidx.test:runner:1.1.1'
+    androidTestImplementation 'com.jayway.jsonpath:json-path:0.8.1'
+    androidTestImplementation 'com.squareup.okhttp:okhttp:2.5.0'
+    androidTestImplementation 'commons-io:commons-io:2.6'
+    androidTestImplementation 'io.netty:netty-all:4.0.41.Final'
+    androidTestImplementation 'jaxen:jaxen:1.1.6'
+    androidTestImplementation 'net.gcardone.junidecode:junidecode:0.4.1'
+    androidTestImplementation 'org.jdom:jdom2:2.0.6'
     unmock 'org.robolectric:android-all:7.1.0_r7-robolectric-0'
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.json:json:20160810'
