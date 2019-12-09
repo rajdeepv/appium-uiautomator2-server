@@ -92,6 +92,7 @@ dependencies {
     testImplementation 'org.powermock:powermock-module-junit4:1.7.4'
     testImplementation 'org.robolectric:robolectric:4.0.2'
     androidTestImplementation 'androidx.test.espresso:espresso-web:3.1.1'
+    androidTestImplementation 'androidx.lifecycle:lifecycle-extensions:2.0.0'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
     androidTestImplementation 'junit:junit:4.12'
 }
